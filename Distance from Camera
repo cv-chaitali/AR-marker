@@ -1,0 +1,79 @@
+
+import cv2 as cv 
+import os
+import numpy as np 
+from cv2 import aruco 
+
+"""this is after the calibration with chess board, loading the dataset got from the calibration"""
+
+
+calib_data = np.load("/Users/chaitalibhattacharyya/Desktop/AR/Augmentdreality/MultiMatrix_final.npz")
+
+
+cam= calib_data["camMatrix"]
+dist = calib_data["distCoef"]
+r_vectors = calib_data["rVector"]
+t_vectors = calib_data["tVector"]
+
+"""the unit is in centimeters"""
+
+Marker = 2
+
+
+""" initialising the information from the dictionary to detect the parameters"""
+
+Marker_dictionary = aruco.Dictionary_get(aruco.DICT_4X4_100)
+Marker_parameters = aruco.DetectorParameters_create()
+
+"""helps in live video capture rather than prerecorded video"""
+cap = cv.VideoCapture(0)
+
+while True:
+    ret, frame = cap.read()       
+    if not ret:
+        break
+    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    corners,ids,reject = aruco.detectMarkers(gray,Marker_dictionary,parameters=Marker_parameters)
+    
+
+    
+    if corners:
+        r,t,_ = aruco.estimatePoseSingleMarkers(corners, Marker, cam, dist)
+        total_markers = range(0, ids.size)
+        for idsss, corners, idx in zip(ids, corners, total_markers):
+            cv.polylines(frame,[corners.astype(np.int32)], True, (0.255,255), 4, cv.LINE_AA)
+            corners = corners.reshape(4,2)
+            corners = corners.astype(int)
+
+            Rtop=corners[0].ravel()
+            Ltop = corners[1].ravel()
+            BotR = corners[2].ravel()
+            BotL = corners[3].ravel()
+            
+                        
+            """distance measuring with euclidean distance method"""
+            
+            distance_EUCL = np.sqrt(t[idx][0][2]**2+t[idx][0][1]**2+t[idx][0][0]**2)
+            
+            """distance between markers"""
+
+            
+            """to draw the pose of the marker"""
+            point = cv.drawFrameAxes(frame, cam, dist, r[idx], t[idx] , 4,4)
+            cv.putText(frame, f"id:{ids[0]} Distance: {round(distance_EUCL,3)}", Ltop, cv.FONT_ITALIC,1.2,(0,0,255),
+            2, cv.LINE_AA,)
+            cv.putText(frame, f"x:{t[idx][0][0]} y:{t[idx][0][1]} z:{t[idx][0][2]}", Rtop, cv.FONT_HERSHEY_PLAIN,0.2,(0,0,255),
+            2, cv.LINE_AA,)
+            
+
+            
+    
+    cv.imshow("frame", frame)
+    key = cv.waitKey(1)
+    if key == ord("q"):
+        break
+cap.release()
+cv.destroyAllWindows()
+            
+
+
