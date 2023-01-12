@@ -11,3 +11,5 @@ Distance from Camera to AR marker : [Euclidean Distance, translation vector, rot
 
 Distance and Angle between two markers : [Euclidean Distance, Rodriguez formula, tracing angle formula]
 
+
+Thanks to https://www.youtube.com/watch?v=mn-M6Qzx6SE&t=45s 
