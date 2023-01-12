@@ -1,0 +1,73 @@
+import numpy as np
+import math 
+import cv2
+
+
+
+"""Getting the calibration data first"""
+
+calib_data = np.load("/Users/chaitalibhattacharyya/Desktop/AR/Augmentdreality/MultiMatrix_final.npz")
+
+
+camera_matrix= calib_data["camMatrix"]
+dist_coeffs = calib_data["distCoef"]
+r_vectors = calib_data["rVector"]
+t_vectors = calib_data["tVector"]
+
+
+
+
+Marker_Dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_5X5_1000)
+
+"""Capturing the video"""
+
+cap = cv2.VideoCapture(0)
+
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    
+    
+    corner, ids, _ = cv2.aruco.detectMarkers(frame, Marker_Dictionary)
+    
+
+    
+    if len(corner)>=2:
+        Marker_1 = corner[0]
+        Marker_2 = corner[1]
+        
+        r_1,t_1,_ = cv2.aruco.estimatePoseSingleMarkers(Marker_1,9.3,camera_matrix,dist_coeffs)
+        r_2,t_2,_ = cv2.aruco.estimatePoseSingleMarkers(Marker_2,9.3,camera_matrix,dist_coeffs)
+        
+        """Distance between two markers using numpy linalg method"""
+        distance = np.linalg.norm(t_1-t_2)
+        
+        """Pose respect to the first marker of second marker"""
+        r_1_mat,_ = cv2.Rodrigues(r_1)
+        r_2_mat,_ = cv2.Rodrigues(r_2)
+        relative_r = r_2_mat @ r_1_mat.T #matrix
+        relative_r,_ = cv2.Rodrigues(relative_r) #vector
+        angle = math.acos((relative_r[0][0]+relative_r[1][1]+relative_r[2][2]-1)/2)
+        
+        
+        
+        print("Distance between markers:" ,distance)
+        print("Relative pose:", relative_r)
+        print("Angle between the markers:", angle)
+        
+        Ltop = corner[1].ravel()
+        cv2.putText(frame,f"id:{ids[0]} Distance:{distance}", Ltop, cv2.FONT_ITALIC,1.2,(0,0,255),2,cv2.LINE_AA,)
+        cv2.imshow("Frame", frame)
+        
+        
+        """Terminate the process"""
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        
+        
+cap.release()
+cv2.destroyAllWindows()
+        
+    
